@@ -9998,16 +9998,18 @@ void CMinecraftApp::SetTickTMSDLCFiles(bool bVal)
 
 wstring CMinecraftApp::getFilePath(DWORD packId, wstring filename, bool bAddDataFolder, wstring mountPoint)
 {
-	wstring path = getRootPath(packId, true, bAddDataFolder, mountPoint) + filename;
-	File f(path);
-	if(f.exists())
-	{
-		return path;
+	wstring root = getRootPath(packId, true, bAddDataFolder);
+
+	// Probably not important, but keep anyway
+	if (!filename.empty() && (filename[0] == L'\\' || filename[0] == L'/')) {
+		filename.erase(0, 1);
 	}
-	return getRootPath(packId, false, true, mountPoint) + filename;
+
+	wstring fullPath = root + filename;
+	return fullPath;
 }
 
-#ifdef _XBOX
+
 // Texture packs that have their data in the TU data
 enum ETitleUpdateTexturePacks
 {
@@ -10025,29 +10027,29 @@ enum ETitleUpdateTexturePacks
 	eTUTP_Cartoon = 0x807,
 	eTUTP_Steampunk = 0x01000808, // 4J Stu - The released Steampunk pack had a sub-pack ID
 };
-
+#ifdef _XBOX
 #ifdef _TU_BUILD
 wstring titleUpdateTexturePackRoot = L"UPDATE:\\res\\DLC\\";
 #else
 wstring titleUpdateTexturePackRoot = L"GAME:\\res\\TitleUpdate\\DLC\\";
 #endif
 #else
-enum ETitleUpdateTexturePacks
-{
-	//eTUTP_MassEffect = 0x400,
-	//eTUTP_Skyrim = 0x401,
-	//eTUTP_Halo = 0x402,
-	//eTUTP_Festive = 0x405,
+// enum ETitleUpdateTexturePacks
+// {
+// 	//eTUTP_MassEffect = 0x400,
+// 	//eTUTP_Skyrim = 0x401,
+// 	//eTUTP_Halo = 0x402,
+// 	//eTUTP_Festive = 0x405,
 
-	//eTUTP_Plastic = 0x801,
-	//eTUTP_Candy = 0x802,
-	//eTUTP_Fantasy = 0x803,
-	eTUTP_Halloween = 0x804,
-	//eTUTP_Natural = 0x805,
-	//eTUTP_City = 0x01000806, // 4J Stu - The released City pack had a sub-pack ID
-	//eTUTP_Cartoon = 0x807,
-	//eTUTP_Steampunk = 0x01000808, // 4J Stu - The released Steampunk pack had a sub-pack ID
-};
+// 	//eTUTP_Plastic = 0x801,
+// 	//eTUTP_Candy = 0x802,
+// 	//eTUTP_Fantasy = 0x803,
+// 	eTUTP_Halloween = 0x804,
+// 	//eTUTP_Natural = 0x805,
+// 	//eTUTP_City = 0x01000806, // 4J Stu - The released City pack had a sub-pack ID
+// 	//eTUTP_Cartoon = 0x807,
+// 	//eTUTP_Steampunk = 0x01000808, // 4J Stu - The released Steampunk pack had a sub-pack ID
+// };
 
 #ifdef _WINDOWS64
 wstring titleUpdateTexturePackRoot = L"Windows64\\DLC\\";
@@ -10063,83 +10065,40 @@ wstring titleUpdateTexturePackRoot = L"CU\\DLC\\";
 
 #endif
 
-wstring CMinecraftApp::getRootPath(DWORD packId, bool allowOverride, bool bAddDataFolder, wstring mountPoint)
+
+// ivan2282 - This is only way i could make DLC Textures Pack work
+wstring CMinecraftApp::getRootPath(DWORD packId, bool allowOverride, bool bAddDataFolder)
 {
-	wstring path = mountPoint;
-#ifdef _XBOX
-	if(allowOverride)
-	{
-		switch(packId)
-		{
-		case eTUTP_MassEffect:
-			path = titleUpdateTexturePackRoot + L"MassEffect";
-			break;
-		case eTUTP_Skyrim:
-			path = titleUpdateTexturePackRoot + L"Skyrim";
-			break;
-		case eTUTP_Halo:
-			path = titleUpdateTexturePackRoot + L"Halo";
-			break;
-		case eTUTP_Festive:
-			path = titleUpdateTexturePackRoot + L"Festive";
-			break;
-		case eTUTP_Plastic:
-			path = titleUpdateTexturePackRoot + L"Plastic";
-			break;
-		case eTUTP_Candy:
-			path = titleUpdateTexturePackRoot + L"Candy";
-			break;
-		case eTUTP_Fantasy:
-			path = titleUpdateTexturePackRoot + L"Fantasy";
-			break;
-		case eTUTP_Halloween:
-			path = titleUpdateTexturePackRoot + L"Halloween";
-			break;
-		case eTUTP_Natural:
-			path = titleUpdateTexturePackRoot + L"Natural";
-			break;
-		case eTUTP_City:
-			path = titleUpdateTexturePackRoot + L"City";
-			break;
-		case eTUTP_Cartoon:
-			path = titleUpdateTexturePackRoot + L"Cartoon";
-			break;
-		case eTUTP_Steampunk:
-			path = titleUpdateTexturePackRoot + L"Steampunk";
-			break;
-		};
-		File folder(path);
-		if(!folder.exists())
-		{
-			path = mountPoint;
+	wstring basePath = L"";
+	wchar_t cwd[1024];
+
+	if (_wgetcwd(cwd, 1024) != nullptr) {
+		basePath = cwd;
+		if (!basePath.empty() && basePath.back() != L'\\' && basePath.back() != L'/') {
+			basePath += L"\\";
 		}
 	}
-#else
-	if(allowOverride)
-	{
-		switch(packId)
-		{
-		case eTUTP_Halloween:
-			path = titleUpdateTexturePackRoot + L"Halloween Texture Pack";
-			break;
-		};
-		File folder(path);
-		if(!folder.exists())
-		{
-			path = mountPoint;
+
+	wstring subPath = L"";
+	if (allowOverride) {
+		switch (packId) {
+		case eTUTP_MassEffect: subPath = L"Mass Effect\\"; break;
+		case eTUTP_Skyrim:     subPath = L"Skyrim\\";      break;
+		case eTUTP_Halo:       subPath = L"Halo\\";        break;
+		case eTUTP_Plastic:    subPath = L"Plastic\\";     break;
+		case eTUTP_Candy:      subPath = L"Candy\\";       break;
+		case eTUTP_Fantasy:    subPath = L"Fantasy\\";     break;
+		case eTUTP_Halloween:  subPath = L"Halloween\\";   break;
+		case eTUTP_Natural:    subPath = L"Natural\\";     break;
+		case eTUTP_City:       subPath = L"City\\";        break;
 		}
 	}
-#endif
 
-	if(bAddDataFolder)
-	{
-		return path + L"\\Data\\";
-	}
-	else
-	{
-		return path + L"\\";
+	if (bAddDataFolder) {
+		return basePath + L"Windows64Media\\DLC\\" + subPath + L"Data\\";
 	}
 
+	return basePath + subPath;
 }
 
 #ifdef _XBOX_ONE
