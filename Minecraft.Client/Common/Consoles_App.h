@@ -909,7 +909,7 @@ private:
 	unordered_map<int, wstring>m_localeA;
 	unordered_map<wstring, int>m_eMCLangA;
 	unordered_map<wstring, int>m_xcLangA;
-	wstring getRootPath(DWORD packId, bool allowOverride, bool bAddDataFolder, wstring mountPoint);
+	wstring getRootPath(DWORD packId, bool allowOverride, bool bAddDataFolder);
 public:
 
 #ifdef _XBOX
